@@ -10,7 +10,7 @@ export function AuthProvider({ children }) {
 
   const fetchProfile = async (uid) => {
     const { data } = await supabase.from('profiles').select('*').eq('id', uid).single()
-    setProfile(data)
+    setProfile(data || null)
   }
 
   useEffect(() => {
@@ -19,19 +19,30 @@ export function AuthProvider({ children }) {
       if (session?.user) fetchProfile(session.user.id)
       setLoading(false)
     })
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
       setUser(session?.user ?? null)
       if (session?.user) fetchProfile(session.user.id)
-      else setProfile(null)
+      else { setProfile(null) }
     })
+
     return () => subscription.unsubscribe()
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, isAdmin: profile?.role === 'admin' }}>
+    <AuthContext.Provider value={{
+      user,
+      profile,
+      loading,
+      isAdmin: profile?.role === 'admin',
+    }}>
       {children}
     </AuthContext.Provider>
   )
 }
 
-export const useAuthContext = () => useContext(AuthContext)
+export const useAuthContext = () => {
+  const ctx = useContext(AuthContext)
+  if (!ctx) throw new Error('useAuthContext must be used within AuthProvider')
+  return ctx
+}
